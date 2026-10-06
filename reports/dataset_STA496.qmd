@@ -1,0 +1,175 @@
+---
+# Document Setup ---------------------------------------------------------
+
+# Set document details.
+title: 'Physical Play Relative to Listed Size in the NHL'
+subtitle: 'STA 496 Dataset Report'
+author: 'Rento Saijo'
+date: '2026-10-06'
+date-format: iso
+
+# Configure PDF output.
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: pdflatex
+    fontsize: 10pt
+    papersize: letter
+    geometry: margin=1in
+    fontfamily: lmodern
+    indent: true
+
+# Configure code output.
+execute:
+  echo: false
+  message: false
+  warning: false
+
+# Configure LaTeX formatting.
+include-in-header:
+  text: |
+    % Page Layout --------------------------------------------------------
+
+    % Load packages.
+    \usepackage{fancyhdr, lastpage, titling}
+
+    % Configure paragraphs and title.
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{4pt}
+    \pretitle{\begin{center}\Large\scshape}
+    \preauthor{\begin{center}\large\scshape\begin{tabular}[t]{c}}
+
+    % Configure page footer.
+    \pagestyle{fancy}
+    \fancyhf{}
+    \fancyfoot[C]{\textsc{Page \thepage\ of \pageref*{LastPage}}}
+    \renewcommand{\headrulewidth}{0pt}
+---
+
+```{r}
+#| label: setup
+#| include: false
+# Load Bundled Inputs ----------------------------------------------------
+
+# Read descriptive observations and provenance.
+study       <- base::readRDS('../data/analysis_data.rds')
+inputs      <- study$a3z$inputs
+features    <- inputs$features
+coverage    <- inputs$coverage
+source_rows <- inputs$sourceRows
+games       <- inputs$games
+
+# Formatting Helpers -----------------------------------------------------
+
+# Format whole-number counts.
+format_count <- function(value) base::format(value, big.mark = ',', scientific = FALSE, trim = TRUE)
+
+# Summarize Coverage -----------------------------------------------------
+
+# Count eligible observations by position and season.
+season_ids    <- base::sort(base::unique(features$seasonId))
+season_labels <- base::paste0(season_ids %/% 10000L, '--', base::substr(season_ids %% 10000L, 3L, 4L))
+season_table  <- base::data.frame(
+  Season      = season_labels,
+  Forwards    = base::vapply(season_ids, function(season) base::sum(features$seasonId == season & features$positionCode != 'D'), base::integer(1L)),
+  Defensemen  = base::vapply(season_ids, function(season) base::sum(features$seasonId == season & features$positionCode == 'D'), base::integer(1L))
+)
+season_table$Total <- season_table$Forwards + season_table$Defensemen
+
+# Count source-row audit outcomes.
+status_levels <- base::c('Retained', 'Unresolved game', 'Unresolved player', 'Invalid event counts', 'Player exposure disagreement', 'Game exposure disagreement')
+status_table  <- base::data.frame(Status = status_levels, Rows = base::vapply(status_levels, function(status) base::sum(source_rows$rowStatus == status), base::integer(1L)))
+```
+
+```{=latex}
+\thispagestyle{fancy}
+\vspace{-1em}\rule{\linewidth}{0.6pt}\vspace{0.5em}
+```
+
+## What one observation represents
+
+Each scoring row represents an NHL **player and regular season**. We join five-on-five NHL events and shifts to the same players and games in the [All Three Zones transition workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1). Behavior spans 2021--22 through 2024--25; roster outcomes extend through 2025--26 for a one-year follow-up.
+
+NHL play-by-play supplies contact and shooting events, rosters identify players, and shifts measure five-on-five exposure. Corey Sznajder's manually tracked records add forechecking, retrieval, and entry-defense actions. We retrieve NHL records through the pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper) revision and follow the [All Three Zones glossary](https://www.allthreezones.com/player-cardsfaq.html). The workbook was retrieved on `r inputs$provenance$collectedAt`; its SHA-256 fingerprint is `r inputs$provenance$workbookSha256`.
+
+Official NHL draft-year scouting passages provide an earlier description of physical traits. Public files retain coded mentions and a [source catalog](https://github.com/RentoSaijo/CSAx_STA496/blob/main/validation/external_validation_source_catalog.csv); passage text and blinded identity keys stay outside Git.
+
+## Matching and eligibility
+
+We preserve the workbook's original labels while matching games by teams, a date within three days, and NHL rosters. Names and sweater numbers help resolve players who share a name. A game match must be unambiguous and identify at least 90% of its players. We retain one valid row per NHL game and player, collapsing identical duplicates and excluding conflicts.
+
+The workbook contains `r format_count(base::nrow(games))` game labels. Of these, `r format_count(base::sum(!base::is.na(games$gameId)))` resolve to `r format_count(base::length(base::unique(stats::na.omit(games$gameId))))` distinct NHL games. Fifteen labels remain unresolved. At the player-game level, the matched audit yields the following flow.
+
+```{r}
+#| label: tbl-source-flow
+#| tbl-cap: 'Disposition of All Three Zones skater-game rows after identity, count, and exposure checks.'
+#| tbl-pos: H
+# Display source-row audit counts.
+knitr::kable(
+  base::transform(status_table, Rows = format_count(Rows)),
+  format = 'latex', booktabs = TRUE, linesep = '', row.names = FALSE, align = base::c('l', 'r')
+)
+```
+
+We compare source ice time with NHL five-on-five exposure reconstructed from shift intervals. A player-game is set aside when its difference exceeds 120 seconds, or its game's median absolute difference exceeds 60 seconds. Counts must be nonnegative integers, and denials cannot exceed targets. These checks leave `r format_count(base::sum(source_rows$rowStatus == 'Retained'))` player-game rows; their median absolute exposure difference is `r sprintf('%.2f', stats::median(base::abs(source_rows$deltaSeconds[source_rows$rowStatus == 'Retained']), na.rm = TRUE))` seconds. Rates use **NHL shift-derived minutes**, while source minutes remain for audit.
+
+Player-seasons need at least 300 full-season NHL minutes, listed height and weight, and a known birth date. Scoring also requires 150 matched five-on-five minutes. Of `r format_count(base::nrow(coverage))` candidate player-seasons, `r format_count(base::sum(coverage$eligible))` meet that threshold: `r format_count(base::sum(features$positionCode != 'D'))` forwards and `r format_count(base::sum(features$positionCode == 'D'))` defensemen. The other `r format_count(base::sum(!coverage$eligible))` lack enough tracked exposure. Published rankings will require 500 full-season minutes.
+
+```{r}
+#| label: tbl-seasons
+#| tbl-cap: 'Eligible scored player-seasons by position and behavior season.'
+#| tbl-pos: H
+# Display positional study coverage.
+knitr::kable(
+  base::transform(season_table, Forwards = format_count(Forwards), Defensemen = format_count(Defensemen), Total = format_count(Total)),
+  format = 'latex', booktabs = TRUE, linesep = '', row.names = FALSE, align = base::c('l', 'r', 'r', 'r')
+)
+```
+
+The rows represent `r format_count(base::length(base::unique(features$playerId)))` players. Median matched exposure is `r sprintf('%.2f', stats::median(features$trackedMinutes[features$positionCode != 'D']))` minutes for forwards and `r sprintf('%.2f', stats::median(features$trackedMinutes[features$positionCode == 'D']))` for defensemen. Each season is modeled separately.
+
+## Variables used to construct CSAx
+
+The six direct measures appear in both positional models. Each counts a player's attributed NHL event in a matched five-on-five game and divides by that player's NHL five-on-five minutes, expressed per 60. A recorded zero event is kept as zero when exposure is positive.
+
+| Measure | Recorded numerator and interpretation |
+|:--|:--|
+| Hits delivered | Hits attributed to the player as hitter; possession and role affect opportunities. |
+| Hits received | Hits attributed to the player as recipient; exposure to contact need not mean initiating it. |
+| Opponent shots blocked | Shots blocked for the defending team, excluding teammate blocks; a recorded block need not involve body contact. |
+| Fights | Recorded fighting infractions, counted separately from contact penalties; events are sparse. |
+| Contact penalties taken | Whitelisted contact-related infractions attributed to the player, counted as incidents rather than minutes. |
+| Contact penalties drawn | Whitelisted infractions committed by opponents against the player; puck possession and skill also affect exposure. |
+
+The penalty whitelist covers boarding, charging, checking from behind, clipping, elbowing, head checks, kneeing, roughing, slew-footing, cross-checking, high-sticking, holding, holding the stick, hooking, and tripping, with recorded helmet-removal and double-minor variants. Fighting stays separate. Exact source labels are fixed in `R/functions.R`.
+
+Forwards and defensemen have different indirect opportunities. These variables describe involvement around contested space; none directly records pressure on the player at every moment.
+
+| Forward measure | Unit and denominator | Interpretation |
+|:--|:--|:--|
+| Net-front attempt share | Located unblocked attempts at $82\leq x\leq89$ and $|y|\leq8$ feet / all located unblocked attempts | Shooting near the crease; location does not confirm pressure. |
+| Tip/deflection share | Tips and deflections / shots on goal or goals with known shot type | Redirections often occur near traffic; role affects opportunities. |
+| Median shot distance | Feet from goal among located unblocked attempts | Proximity of shooting involvement. |
+| Backhand share | Backhands / shots on goal or goals with known shot type | Possible constrained shooting space; backhands occur elsewhere. |
+| Dump-in recoveries | All Three Zones `Recoveries` per 60 matched minutes | Recovering a dump-in and making a play. |
+| Forecheck pressures | All Three Zones `Forecheck Pressures` per 60 matched minutes | Pressuring a puck-carrying defender. |
+
+| Defenseman measure | Unit and denominator | Interpretation |
+|:--|:--|:--|
+| Defensive-zone retrievals | All Three Zones `DZ Retrievals` per 60 matched minutes | Collecting the puck in the defensive zone and making a play. |
+| Botched retrievals | All Three Zones `Botched Retrievals` per 60 matched minutes | Retrieval-related breakdowns; the tracked category can involve the receiving player. |
+| Entry denial share | All Three Zones `Denials` divided by `Targets` | Preventing an opponent's attempted entry; gap control and team tactics also matter. |
+
+Source counts and share denominators remain in the feature table. A share with zero opportunities stays missing before training-sample imputation. One center-season has an undefined entry-denial share; the forward model does not use that feature. All modeled primary features are present. Twenty opportunities is a caution threshold for sparse denominators, not a reliability guarantee.
+
+## Outcomes and interpretation
+
+The scouting code records mentions of active physical traits such as checking and puck battles in an earlier report. No mention is not evidence of soft play. Official NHL records provide power-play and penalty-kill minutes as shares of total regular-season ice time; recorded zeros remain distinct from missing values.
+
+Postseason contact uses five-on-five hits, hits received, and opponent shots blocked in each team's first four playoff games, compared with regular-season games excluded from CSAx inputs. Rate comparisons require positive exposure in both periods. Continuation means at least 300 NHL minutes next season; minutes per game is defined among returners. Adjustment variables are listed size, age, current games and ice time per game, five-on-five points per 60, relative shot attempts, and season.
+
+Tracked games are unevenly selected. Player-game totals have no timestamps or linked possession sequences, so retrievals and denials remain proxies for physical involvement. Interpretation depends on scouting evidence, role, and tracking coverage.
+
+## Reproduction and sources
+
+Bundled `data/analysis_data.rds` supplies inputs and provenance. Restore `renv.lock` and render this QMD with Quarto; fresh acquisition requires the [All Three Zones workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1) and pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper).
