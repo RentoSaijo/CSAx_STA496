@@ -1,0 +1,91 @@
+---
+# Document Setup ---------------------------------------------------------
+
+# Set document details.
+title: 'Physical Play Relative to Listed Size in the NHL'
+subtitle: 'STA 496 Research Proposal'
+author: 'Rento Saijo'
+date: '2026-10-06'
+date-format: iso
+
+# Configure PDF output.
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: pdflatex
+    fontsize: 10pt
+    papersize: letter
+    geometry: margin=1in
+    fontfamily: lmodern
+    indent: true
+
+# Configure code output.
+execute:
+  echo: false
+  message: false
+  warning: false
+
+# Configure LaTeX formatting.
+include-in-header:
+  text: |
+    % Page Layout --------------------------------------------------------
+
+    % Load packages.
+    \usepackage{fancyhdr, lastpage, titling}
+
+    % Configure paragraphs and title.
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{4pt}
+    \pretitle{\begin{center}\Large\scshape}
+    \preauthor{\begin{center}\large\scshape\begin{tabular}[t]{c}}
+
+    % Configure page footer.
+    \pagestyle{fancy}
+    \fancyhf{}
+    \fancyfoot[C]{\textsc{Page \thepage\ of \pageref*{LastPage}}}
+    \renewcommand{\headrulewidth}{0pt}
+---
+
+```{=latex}
+\thispagestyle{fancy}
+\vspace{-1em}\rule{\linewidth}{0.6pt}\vspace{0.5em}
+```
+
+## Motivation
+
+A player's height and weight are easy to find, and hits are easy to count. Neither tells us how much physical presence that player brings *for their size*. In hockey, that presence can appear in direct contact or in the less obvious work of reaching contested space, recovering the puck, and disrupting an opponent's movement. A smaller forward who repeatedly recovers dump-ins and a defenseman who denies entries may contribute to those battles even when their hit totals look ordinary.
+
+We propose calibrated size above expected (CSAx) as a way to study this distinction. It asks what size a player's recorded behavior resembles, then compares that behavior-implied size with the player's listed frame. A higher score describes a more physical profile relative to size. The score does not measure courage, overall ability, or success on every play. Its value depends on whether the chosen behaviors reflect physical engagement and whether the resulting profiles agree with evidence outside the score itself.
+
+## Research questions and design
+
+We begin with two separate models because forwards and defensemen meet different opportunities. Both use hits delivered and received, opponent shots blocked, fights, and recorded contact penalties taken and drawn. Forwards also contribute shooting-location and shot-type measures, dump-in recoveries, and forecheck pressure. Defensemen contribute defensive-zone retrievals, botched retrievals, and the share of targeted entries they deny. The [dataset report](dataset_STA496.pdf) defines these variables and their denominators.
+
+For each season and position, we combine listed height and weight into a standardized size measure. Ridge regression predicts that size from the recorded behaviors. We use five outer assessment folds and tune the penalty within each training fold using five further splits. Each player-season is scored by a model and frame calibration that exclude it. CSAx standardizes the difference between a player's behavior-implied size and that frame-based expectation within the position and season. We will check held-out size prediction against a mean-size baseline, residual size trends, annual stability, and the influence of sparse events before interpreting rankings.
+
+The first external question concerns scouting. One rater, blinded to player identity and CSAx, codes whether an official NHL draft-year report published before the player's included NHL seasons mentions active physical traits such as checking or puck battles. We will ask whether players with such descriptions tend to have higher player-average CSAx. A report with no mention supplies a comparison group; its silence cannot establish soft play.
+
+We will then examine where players are used. Official ice-time records let us compare CSAx with power-play and penalty-kill minutes as shares of total ice time. These are associations with assigned roles, shaped by teammates and coaching as well as by the player. They complement the scouting comparison without serving as another definition of toughness.
+
+Postseason games offer a different question: does contact change when the setting changes? We will compare five-on-five regular-season games excluded from CSAx construction with each team's first four postseason games. That window gives qualifying teams the same number of games regardless of how far they advance. Player-season Poisson models will compare hit counts with ice-time offsets and interactions with CSAx; hits received and opponent shots blocked will provide context. We will examine the full postseason as a window check. Participation in the playoffs is selective, so the analysis concerns players observed in both periods.
+
+Finally, we will study next-season continuation, defined as at least 300 NHL minutes. Separate positional logistic models will adjust for listed size, age, current-season games and ice time per game, five-on-five scoring, relative shot attempts, and season. We will compare current and prior role on matched observations, and examine next-season ice time per game among returners. Continuation can show practical roster relevance, while ice time describes the role of those who return. Neither outcome by itself verifies the meaning of CSAx.
+
+## Data and feasibility
+
+The study joins NHL play-by-play, rosters, shifts, and official ice-time records with Corey Sznajder's [All Three Zones transition workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1). Four regular seasons, 2021--22 through 2024--25, supply behavior; the next-season roster window reaches 2025--26. The prepared study population requires at least 300 full-season NHL minutes and 150 matched, tracked five-on-five minutes. It contains 1,485 forward- and 829 defenseman-seasons. Uneven game tracking and the fact that these microstats summarize player-games, rather than individual puck battles, shape what we can infer.
+
+## Work plan
+
+| Dates (2026) | Planned work |
+|:--|:--|
+| October 6--12 | Confirm source matches, exclusions, denominators, and descriptive coverage. |
+| October 13--19 | Review positional features, held-out prediction, calibration, and score stability. |
+| October 20--26 | Compare scores with scouting descriptions and special-teams roles. |
+| October 27--November 2 | Examine postseason engagement and next-season continuation; draft the paper. |
+| November 3--9 | Revise the paper and presentation after feedback. |
+| **November 10** | **Present the completed research.** |
+
+## Sources
+
+NHL records are retrieved through the pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper) revision. All Three Zones supplies the [transition workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1) and its [microstat glossary](https://www.allthreezones.com/player-cardsfaq.html). The [source catalog](https://github.com/RentoSaijo/CSAx_STA496/blob/main/validation/external_validation_source_catalog.csv) identifies the official NHL scouting reports used for external comparison.
