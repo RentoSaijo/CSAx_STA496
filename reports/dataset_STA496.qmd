@@ -87,17 +87,17 @@ status_table  <- base::data.frame(Status = status_levels, Rows = base::vapply(st
 
 ## What one observation represents
 
-Each scoring row represents an NHL **player and regular season**. We join five-on-five NHL events and shifts to the same players and games in the [All Three Zones transition workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1). Behavior spans 2021--22 through 2024--25; roster outcomes extend through 2025--26 for a one-year follow-up.
+The scoring unit is an NHL **player and regular season**. To assemble each row, we link five-on-five NHL events and shifts with the same players and games in the [All Three Zones transition workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1). Recorded behavior covers 2021--22 through 2024--25, and roster outcomes extend through 2025--26 for a one-year follow-up.
 
-NHL play-by-play supplies contact and shooting events, rosters identify players, and shifts measure five-on-five exposure. Corey Sznajder's manually tracked records add forechecking, retrieval, and entry-defense actions. We retrieve NHL records through the pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper) revision and follow the [All Three Zones glossary](https://www.allthreezones.com/player-cardsfaq.html). The workbook was retrieved on `r inputs$provenance$collectedAt`; its SHA-256 fingerprint is `r inputs$provenance$workbookSha256`.
+NHL play-by-play supplies contact and shooting events, rosters identify players, and shifts measure five-on-five exposure; Corey Sznajder's tracked records add forechecking, retrieval, and entry-defense actions. We obtain NHL records through the pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper) revision and use the [All Three Zones glossary](https://www.allthreezones.com/player-cardsfaq.html) for the tracked measures. Retrieved on `r inputs$provenance$collectedAt`, the workbook has SHA-256 fingerprint `r inputs$provenance$workbookSha256`.
 
-Official NHL draft-year scouting passages provide an earlier description of physical traits. Public files retain coded mentions and a [source catalog](https://github.com/RentoSaijo/CSAx_STA496/blob/main/validation/external_validation_source_catalog.csv); passage text and blinded identity keys stay outside Git.
+Official NHL draft-year scouting passages describe physical traits before the included NHL seasons. Public files retain coded mentions and a [source catalog](https://github.com/RentoSaijo/CSAx_STA496/blob/main/validation/external_validation_source_catalog.csv); passage text and blinded identity keys stay outside Git.
 
 ## Matching and eligibility
 
-We preserve the workbook's original labels while matching games by teams, a date within three days, and NHL rosters. Names and sweater numbers help resolve players who share a name. A game match must be unambiguous and identify at least 90% of its players. We retain one valid row per NHL game and player, collapsing identical duplicates and excluding conflicts.
+We preserve the workbook's original labels while identifying games from teams, dates within three days, and NHL rosters. Names and sweater numbers help distinguish players who share a name. A game must match unambiguously and identify at least 90% of its players; we then retain one valid row per NHL player-game, collapse identical duplicates, and exclude conflicts.
 
-The workbook contains `r format_count(base::nrow(games))` game labels. Of these, `r format_count(base::sum(!base::is.na(games$gameId)))` resolve to `r format_count(base::length(base::unique(stats::na.omit(games$gameId))))` distinct NHL games. Fifteen labels remain unresolved. At the player-game level, the matched audit yields the following flow.
+Of the workbook's `r format_count(base::nrow(games))` game labels, `r format_count(base::sum(!base::is.na(games$gameId)))` resolve to `r format_count(base::length(base::unique(stats::na.omit(games$gameId))))` distinct NHL games; fifteen labels remain unresolved. The player-game audit then yields the following flow.
 
 ```{r}
 #| label: tbl-source-flow
@@ -110,9 +110,11 @@ knitr::kable(
 )
 ```
 
-We compare source ice time with NHL five-on-five exposure reconstructed from shift intervals. A player-game is set aside when its difference exceeds 120 seconds, or its game's median absolute difference exceeds 60 seconds. Counts must be nonnegative integers, and denials cannot exceed targets. These checks leave `r format_count(base::sum(source_rows$rowStatus == 'Retained'))` player-game rows; their median absolute exposure difference is `r sprintf('%.2f', stats::median(base::abs(source_rows$deltaSeconds[source_rows$rowStatus == 'Retained']), na.rm = TRUE))` seconds. Rates use **NHL shift-derived minutes**, while source minutes remain for audit.
+{{< pagebreak >}}
 
-Player-seasons need at least 300 full-season NHL minutes, listed height and weight, and a known birth date. Scoring also requires 150 matched five-on-five minutes. Of `r format_count(base::nrow(coverage))` candidate player-seasons, `r format_count(base::sum(coverage$eligible))` meet that threshold: `r format_count(base::sum(features$positionCode != 'D'))` forwards and `r format_count(base::sum(features$positionCode == 'D'))` defensemen. The other `r format_count(base::sum(!coverage$eligible))` lack enough tracked exposure. Published rankings will require 500 full-season minutes.
+We next compare source ice time with NHL five-on-five exposure reconstructed from shift intervals. We exclude a player-game when its absolute exposure difference exceeds 120 seconds or its game's median absolute difference exceeds 60 seconds. Event counts must also be nonnegative integers, with entry denials no greater than targets. These checks retain `r format_count(base::sum(source_rows$rowStatus == 'Retained'))` player-game rows, with a median absolute exposure disagreement of `r sprintf('%.2f', stats::median(base::abs(source_rows$deltaSeconds[source_rows$rowStatus == 'Retained']), na.rm = TRUE))` seconds. We calculate rates using **NHL shift-derived minutes** and retain source minutes for audit.
+
+At the player-season level, eligibility for scoring requires at least 300 full-season NHL minutes, listed height and weight, and a known birth date. Scoring also requires at least 150 matched five-on-five minutes, while published rankings will require 500 full-season minutes. Of `r format_count(base::nrow(coverage))` candidate player-seasons, `r format_count(base::sum(coverage$eligible))` meet the tracked-exposure threshold: `r format_count(base::sum(features$positionCode != 'D'))` forwards and `r format_count(base::sum(features$positionCode == 'D'))` defensemen. The remaining `r format_count(base::sum(!coverage$eligible))` lack enough tracked exposure.
 
 ```{r}
 #| label: tbl-seasons
@@ -125,11 +127,11 @@ knitr::kable(
 )
 ```
 
-The rows represent `r format_count(base::length(base::unique(features$playerId)))` players. Median matched exposure is `r sprintf('%.2f', stats::median(features$trackedMinutes[features$positionCode != 'D']))` minutes for forwards and `r sprintf('%.2f', stats::median(features$trackedMinutes[features$positionCode == 'D']))` for defensemen. Each season is modeled separately.
+The included player-seasons represent `r format_count(base::length(base::unique(features$playerId)))` players. Their median matched exposure is `r sprintf('%.2f', stats::median(features$trackedMinutes[features$positionCode != 'D']))` minutes for forwards and `r sprintf('%.2f', stats::median(features$trackedMinutes[features$positionCode == 'D']))` minutes for defensemen. We model each season separately.
 
 ## Variables used to construct CSAx
 
-The six direct measures appear in both positional models. Each counts a player's attributed NHL event in a matched five-on-five game and divides by that player's NHL five-on-five minutes, expressed per 60. A recorded zero event is kept as zero when exposure is positive.
+Both positional models use the same six direct measures. For each, we divide a player's attributed NHL events in matched five-on-five games by that player's NHL five-on-five minutes and express the rate per 60. With positive exposure, a recorded zero remains zero.
 
 | Measure | Recorded numerator and interpretation |
 |:--|:--|
@@ -140,9 +142,9 @@ The six direct measures appear in both positional models. Each counts a player's
 | Contact penalties taken | Whitelisted contact-related infractions attributed to the player, counted as incidents rather than minutes. |
 | Contact penalties drawn | Whitelisted infractions committed by opponents against the player; puck possession and skill also affect exposure. |
 
-The penalty whitelist covers boarding, charging, checking from behind, clipping, elbowing, head checks, kneeing, roughing, slew-footing, cross-checking, high-sticking, holding, holding the stick, hooking, and tripping, with recorded helmet-removal and double-minor variants. Fighting stays separate. Exact source labels are fixed in `R/functions.R`.
+The contact-penalty whitelist covers boarding, charging, checking from behind, clipping, elbowing, head checks, kneeing, roughing, slew-footing, cross-checking, high-sticking, holding, holding the stick, hooking, and tripping, with recorded helmet-removal and double-minor variants. Fighting is counted separately. The exact source labels are fixed in `R/functions.R`.
 
-Forwards and defensemen have different indirect opportunities. These variables describe involvement around contested space; none directly records pressure on the player at every moment.
+Position-specific measures add information about involvement in contested space, where forwards and defensemen face different opportunities. They do not record the pressure a player faces at every moment.
 
 {{< pagebreak >}}
 
@@ -161,16 +163,16 @@ Forwards and defensemen have different indirect opportunities. These variables d
 | Botched retrievals | All Three Zones `Botched Retrievals` per 60 matched minutes | Retrieval-related breakdowns; the tracked category can involve the receiving player. |
 | Entry denial share | All Three Zones `Denials` divided by `Targets` | Preventing an opponent's attempted entry; gap control and team tactics also matter. |
 
-Source counts and share denominators remain in the feature table. A share with zero opportunities stays missing before training-sample imputation. One center-season has an undefined entry-denial share; the forward model does not use that feature. All modeled primary features are present. Twenty opportunities is a caution threshold for sparse denominators, not a reliability guarantee.
+The feature table retains source counts and share denominators. A share with no opportunities remains missing until training-sample imputation. The forward model does not use the undefined entry-denial share for one center-season, so all modeled primary features are present. A 20-opportunity threshold flags sparse denominators but does not guarantee reliability.
 
 ## Outcomes and interpretation
 
-The scouting code records mentions of active physical traits such as checking and puck battles in an earlier report. No mention is not evidence of soft play. Official NHL records provide power-play and penalty-kill minutes as shares of total regular-season ice time; recorded zeros remain distinct from missing values.
+Scouting codes record earlier mentions of active physical traits such as checking and puck battles. Silence cannot establish soft play. Official NHL records provide power-play and penalty-kill shares of total regular-season ice time; recorded zeros remain distinct from missing values.
 
-Postseason contact uses five-on-five hits, hits received, and opponent shots blocked in each team's first four playoff games, compared with regular-season games excluded from CSAx inputs. Rate comparisons require positive exposure in both periods. Continuation means at least 300 NHL minutes next season; minutes per game is defined among returners. Adjustment variables are listed size, age, current games and ice time per game, five-on-five points per 60, relative shot attempts, and season.
+For the postseason comparison, we will count five-on-five hits delivered and received and opponent shots blocked in each team's first four playoff games. Regular-season games excluded from CSAx inputs supply the baseline; rate comparisons require positive exposure in both periods. Continuation requires at least 300 NHL minutes the next season, with minutes per game measured among returners. We will adjust for listed size, age, current games and ice time per game, five-on-five points per 60, relative shot attempts, and season.
 
-Tracked games are unevenly selected. Player-game totals have no timestamps or linked possession sequences, so retrievals and denials remain proxies for physical involvement. Interpretation depends on scouting evidence, role, and tracking coverage.
+Tracked games are selected unevenly, and player-game totals lack timestamps or linked possession sequences, so retrievals and denials remain proxies for physical involvement. We interpret them alongside scouting evidence, roles, and coverage.
 
 ## Reproduction and sources
 
-Bundled `data/analysis_data.rds` supplies inputs and provenance. Restore `renv.lock` and render this QMD with Quarto; fresh acquisition requires the [All Three Zones workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1) and pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper).
+Inputs and provenance are bundled in `data/analysis_data.rds`. Restore `renv.lock` and render this QMD with Quarto; fresh acquisition requires the [All Three Zones workbook](https://public.tableau.com/app/profile/corey.sznajder/viz/transitionstats/Sheet1) and pinned [`nhlscraper`](https://github.com/RentoSaijo/nhlscraper).
