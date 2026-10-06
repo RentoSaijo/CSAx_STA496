@@ -1,0 +1,44 @@
+Package: csaxplus
+Type: Project
+Title: Playing Tougher for Their Size among NHL Skaters
+Version: 0.0.2
+Authors@R: c(
+    person('Rento', 'Saijo', role = c('aut', 'cre')),
+    person('Jeff', 'Moher', role = 'aut')
+    )
+Description: Reproducible research project for behavior-derived expected size,
+    matched All Three Zones and NHL play-by-play models, and NHL roster security
+    among forwards and defensemen, with deployment and postseason applications
+    and preserved historical benchmarks.
+License: MIT
+Encoding: UTF-8
+Imports:
+    digest,
+    dplyr,
+    forcats,
+    ggplot2,
+    glue,
+    glmnet,
+    hardhat,
+    knitr,
+    nhlscraper,
+    parsnip,
+    patchwork,
+    poissonreg,
+    purrr,
+    readr,
+    recipes,
+    renv,
+    rlang,
+    rsample,
+    sandwich,
+    scales,
+    stringi,
+    stringr,
+    tibble,
+    tidyr,
+    tune,
+    workflows,
+    yardstick
+Remotes:
+    RentoSaijo/nhlscraper@58821f001469d5024766511e511051377c0f859f
