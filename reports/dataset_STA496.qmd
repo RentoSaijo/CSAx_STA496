@@ -2,8 +2,7 @@
 # Document Setup ---------------------------------------------------------
 
 # Set document details.
-title: 'Physical Play Relative to Listed Size in the NHL'
-subtitle: 'STA 496 Dataset Report'
+title: 'Statistical Research: Data Sources'
 author: 'Rento Saijo'
 date: '2026-10-06'
 date-format: iso
@@ -144,6 +143,8 @@ The six direct measures appear in both positional models. Each counts a player's
 The penalty whitelist covers boarding, charging, checking from behind, clipping, elbowing, head checks, kneeing, roughing, slew-footing, cross-checking, high-sticking, holding, holding the stick, hooking, and tripping, with recorded helmet-removal and double-minor variants. Fighting stays separate. Exact source labels are fixed in `R/functions.R`.
 
 Forwards and defensemen have different indirect opportunities. These variables describe involvement around contested space; none directly records pressure on the player at every moment.
+
+{{< pagebreak >}}
 
 | Forward measure | Unit and denominator | Interpretation |
 |:--|:--|:--|

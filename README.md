@@ -5,7 +5,7 @@ This STA 496 project studies calibrated size above expected (CSAx), a measure of
 ## Reports
 
 - [Research proposal](reports/proposal_STA496.pdf) and [Quarto source](reports/proposal_STA496.qmd)
-- [Dataset report](reports/dataset_STA496.pdf) and [Quarto source](reports/dataset_STA496.qmd)
+- [Data sources](reports/dataset_STA496.pdf) and [Quarto source](reports/dataset_STA496.qmd)
 
 The reports describe the research questions and data without using fitted CSAx or application findings. The repository also contains the broader [CSAx research workflow](https://github.com/RentoSaijo/CSAx_MITSSACRPC) and its bundled analysis object.
 
