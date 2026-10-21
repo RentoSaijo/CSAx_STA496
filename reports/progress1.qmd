@@ -2,7 +2,7 @@
 # Document Setup ---------------------------------------------------------
 
 # Set document details.
-title: 'Statistical Research: Progress 1'
+title: 'Checkpoint 3'
 author: 'Rento Saijo'
 date: '2026-10-21'
 date-format: iso
