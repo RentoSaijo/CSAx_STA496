@@ -50,6 +50,10 @@ include-in-header:
 \vspace{-1em}\rule{\linewidth}{0.6pt}\vspace{0.5em}
 ```
 
+## Research overview
+
+Our research asks how physically engaged an NHL player appears to be relative to their listed size. Height, weight, and hit totals each capture part of that story, but they miss much of the work involved in contesting space and recovering the puck. We develop calibrated size above expected (CSAx) by using recorded on-ice actions to estimate behavior-implied size, then comparing it with the expectation for a player's actual frame. We build separate scores for forwards and defensemen, check them against earlier scouting descriptions, and study how they relate to team roles, postseason contact, and NHL participation the following season.
+
 ## Progress against the plan
 
 We are on track for the November 10 presentation. The work plan set aside October 6--12 for source matching and coverage, October 13--19 for the positional models and their diagnostics, and October 20--26 for scouting and special-teams comparisons. Those stages are complete, as are the postseason and next-season analyses scheduled for the following week. The literature review, methodology, results, and talk abstract are in place; the main task now is to develop them into a full paper.
