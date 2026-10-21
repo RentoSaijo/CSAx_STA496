@@ -1,0 +1,77 @@
+---
+# Document Setup ---------------------------------------------------------
+
+# Set document details.
+title: 'Statistical Research: Progress 1'
+author: 'Rento Saijo'
+date: '2026-10-21'
+date-format: iso
+
+# Configure PDF output.
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: pdflatex
+    fontsize: 10pt
+    papersize: letter
+    geometry: margin=1in
+    fontfamily: lmodern
+    indent: true
+
+# Configure code output.
+execute:
+  echo: false
+  message: false
+  warning: false
+
+# Configure LaTeX formatting.
+include-in-header:
+  text: |
+    % Page Layout --------------------------------------------------------
+
+    % Load packages.
+    \usepackage{fancyhdr, lastpage, titling}
+
+    % Configure paragraphs and title.
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{4pt}
+    \pretitle{\begin{center}\Large\scshape}
+    \preauthor{\begin{center}\large\scshape\begin{tabular}[t]{c}}
+
+    % Configure page footer.
+    \pagestyle{fancy}
+    \fancyhf{}
+    \fancyfoot[C]{\textsc{Page \thepage\ of \pageref*{LastPage}}}
+    \renewcommand{\headrulewidth}{0pt}
+---
+
+```{=latex}
+\thispagestyle{fancy}
+\vspace{-1em}\rule{\linewidth}{0.6pt}\vspace{0.5em}
+```
+
+## Progress against the plan
+
+We are on track for the November 10 presentation. The work plan set aside October 6--12 for source matching and coverage, October 13--19 for the positional models and their diagnostics, and October 20--26 for scouting and special-teams comparisons. Those stages are complete, as are the postseason and next-season analyses scheduled for the following week. The literature review, methodology, results, and talk abstract are in place; the main task now is to develop them into a full paper.
+
+The model review also gives us a reason to be careful with the interpretation. In 2024--25, held-out size prediction for defensemen does not improve on a mean-size baseline. We can still describe the recorded profiles, but we need to weigh that weaker season when discussing score stability and any individual ranking. The broader limits are uneven tracking coverage and player-game summaries that do not show every puck battle. The [proposal](proposal.pdf) and [data sources report](dataset.pdf) set out the design and observation rules behind these comparisons.
+
+## Completed work and next steps
+
+We have combined NHL events, rosters, and shifts with All Three Zones tracking for 1,485 forward-seasons and 829 defenseman-seasons from 2021--22 through 2024--25. Separate positional ridge models use held-out predictions to estimate behavior-implied size, then calibrate it against listed frame to obtain CSAx. We have also compared the scores with earlier scouting descriptions, special-teams ice-time shares, postseason contact, and next-season NHL continuation. Together, these analyses give us the material for the paper's methods and results sections.
+
+The remaining work is to write the full paper so that the measure, its checks, and its applications form one coherent argument. As we write, we will revisit the weak defenseman-season result and run focused additional analyses only where the paper raises a specific unresolved question. This leaves time to refine the interpretation before the November 10 presentation.
+
+{{< pagebreak >}}
+
+## Proposed talk
+
+**Title:** *Playing Tougher for One's Size: Calibrated Size Above Expected in the NHL*
+
+**Abstract.** Physical play in hockey involves contact and battles for the puck and space, yet listed size and hit counts capture only part of that activity. We develop calibrated size above expected (CSAx), a position-specific measure that compares the size implied by a player's recorded behavior with the expectation for their listed frame. NHL events and All Three Zones tracking cover 1,485 forward-seasons and 829 defenseman-seasons from 2021--22 through 2024--25. Separate ridge models yield held-out size predictions, which we calibrate within each position and season. One rater, blinded to player identity and CSAx, codes earlier NHL scouting reports. Players whose reports mention active physical traits have mean CSAx 0.87 standardized units higher among forwards and 0.65 higher among defensemen than players whose reports do not. Higher CSAx is associated with a larger penalty-kill share and smaller power-play share of total ice time, as well as next-season NHL continuation of at least 300 minutes. Among forwards, higher CSAx accompanies a lower hit-rate ratio for each team's first four playoff games relative to regular-season games excluded from score construction; the defenseman estimate is less precise. CSAx adds a size-relative view of recorded physical engagement, with interpretation shaped by uneven tracking and observational comparisons.
+
+## Learning goal
+
+In earlier statistics courses, the response and data structure were usually given. Here I had to decide how to represent physical engagement before choosing a model: which actions plausibly reflect contested space, which records can be matched, and how a player's listed frame should enter the comparison. Learning the tracking definitions and reconciling player-games with NHL shifts made the data work part of the statistical problem. Position-specific ridge models, held-out prediction, and frame calibration then connected that substantive definition to a measurable score.
+
+I have also learned to look beyond a fitted score when evaluating a new measure. Earlier scouting reports offer one independent check, while deployment and continuation show how the score relates to decisions and outcomes without proving what caused them. The uneven coverage and weaker defenseman prediction in one season make that distinction concrete. This project has required me to develop the question, method, and interpretation together, rather than apply a prescribed technique to a ready-made dataset.

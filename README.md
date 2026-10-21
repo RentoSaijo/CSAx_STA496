@@ -6,8 +6,9 @@ This STA 496 project studies calibrated size above expected (CSAx), a measure of
 
 - [Research proposal](reports/proposal.pdf) and [Quarto source](reports/proposal.qmd)
 - [Data sources](reports/dataset.pdf) and [Quarto source](reports/dataset.qmd)
+- [Progress 1](reports/progress1.pdf) and [Quarto source](reports/progress1.qmd)
 
-The reports describe the research questions and data without using fitted CSAx or application findings. The repository also contains the broader [CSAx research workflow](https://github.com/RentoSaijo/CSAx_MITSSACRPC) and its bundled analysis object.
+The proposal and data report describe the research questions and observations; Progress 1 reviews completed work and current findings. The repository also contains the broader [CSAx research workflow](https://github.com/RentoSaijo/CSAx_MITSSACRPC) and its bundled analysis object.
 
 ## Reproduce
 
@@ -17,6 +18,7 @@ R package versions are pinned in `renv.lock`. With R, Quarto, and LaTeX availabl
 Rscript -e "renv::restore(prompt = FALSE)"
 quarto render reports/proposal.qmd --to pdf
 quarto render reports/dataset.qmd --to pdf
+quarto render reports/progress1.qmd --to pdf
 ```
 
 The reports read descriptive inputs from `data/analysis_data.rds`. To rebuild the research analysis from those bundled inputs, run the numbered scripts in order: `scripts/01_prepare_data.R`, `scripts/02_build_csax.R`, and `scripts/03_analyze.R`.
