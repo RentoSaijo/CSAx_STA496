@@ -1,0 +1,77 @@
+---
+# Document Setup ---------------------------------------------------------
+
+# Set document details.
+title: 'Checkpoint 4'
+author: 'Rento Saijo'
+date: '2026-11-09'
+date-format: iso
+
+# Configure PDF output.
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: pdflatex
+    fontsize: 10pt
+    papersize: letter
+    geometry: margin=1in
+    fontfamily: lmodern
+    indent: true
+
+# Configure code output.
+execute:
+  echo: false
+  message: false
+  warning: false
+
+# Configure LaTeX formatting.
+include-in-header:
+  text: |
+    % Page Layout --------------------------------------------------------
+
+    % Load packages.
+    \usepackage{fancyhdr, lastpage, titling}
+
+    % Configure paragraphs and title.
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{4pt}
+    \pretitle{\begin{center}\Large\scshape}
+    \preauthor{\begin{center}\large\scshape\begin{tabular}[t]{c}}
+
+    % Configure page footer.
+    \pagestyle{fancy}
+    \fancyhf{}
+    \fancyfoot[C]{\textsc{Page \thepage\ of \pageref*{LastPage}}}
+    \renewcommand{\headrulewidth}{0pt}
+---
+
+```{=latex}
+\thispagestyle{fancy}
+\vspace{-1em}\rule{\linewidth}{0.6pt}\vspace{0.5em}
+```
+
+## Research question and status
+
+An NHL skater's listed height and weight do not tell us how he contests space. A forward can recover a dump-in under pressure, while a defenseman can retrieve the puck or deny an entry. Our [proposal](proposal.pdf) asks whether such actions, combined with recorded contact, can measure physical play relative to size and whether that measure aligns with earlier scouting descriptions and later NHL roles. We call it calibrated size above expected (CSAx).
+
+The analysis covers 2,314 eligible player-seasons from 825 skaters in 2021--22 through 2024--25. We fit separate ridge models for forwards and defensemen, pooling seasons within each position to establish a common reference while retaining each player's annual profile. All seasons of a player stay together in held-out folds. We calibrate the held-out behavior-implied size predictions against listed size, then standardize the differences within position. Higher CSAx means the recorded actions imply greater size than expected for the player's frame; it does not rate ability.
+
+The empirical work promised in the proposal is complete and ready for the November 10 presentation: source matching, score construction, diagnostics, scouting comparison, and applications. Paper writing continues as we revise Methods, Results, and Discussion with our advisors; the Introduction and Conclusion still need to be drafted. Our remaining work is writing and presentation preparation.
+
+## Findings
+
+The pooled models improve on a same-season mean-size prediction benchmark, with held-out predictive $R^2$ of 0.10 for forwards and 0.11 for defensemen. Earlier scouting descriptions offer a separate check on what the score captures. Among 59 forwards, players whose reports mention active physical play have mean player-average CSAx 0.77 units higher than those whose reports do not (95% CI [0.39, 1.15]); the difference among 23 defensemen is 0.67 (95% CI [0.19, 1.14]). A report's silence does not identify a player as unphysical, and one rater coded the available passages.
+
+{{< pagebreak >}}
+
+## Applications and interpretation
+
+The applications connect CSAx to recognizable parts of an NHL season. Comparing CSAx +1 with -1, one pooled positional standard deviation above and below average, adjusted penalty-kill shares are 1.35 percentage points higher for forwards and 1.33 higher for defensemen; power-play shares are 1.26 and 1.12 points lower. Postseason hitting adds a different pattern. In each team's first four playoff games, observed hit rates rise for both low- and high-CSAx groups, and the high-CSAx group remains the more frequent hitter. Yet lower-CSAx forwards show the larger proportional increase from their own regular-season games excluded from score construction. The adjusted +1 versus -1 ratio of postseason-to-baseline hit-rate ratios is 0.73 (95% CI [0.64, 0.83]) for forwards and 0.89 (95% CI [0.76, 1.05]) for defensemen, whose estimate is less precise.
+
+Finally, the adjusted probability of reaching at least 300 NHL minutes the following season is 4.07 percentage points higher at CSAx +1 than at -1 for forwards (95% CI [1.06, 7.09]) and 5.09 points higher for defensemen (95% CI [1.08, 9.10]). Among players who return, next-season minutes per game show little estimated separation. Taken together, these findings suggest that size-relative physical play accompanies particular roles and continued NHL participation. Tracking covers selected games, and the application comparisons are observational, so we interpret the relationships as associations.
+
+## Presentation plan
+
+For the November 10 talk, I will use the working title *Playing Tougher for One's Size: Calibrated Size Above Expected in the NHL*. I plan to open with the contrast between a player's listed frame and the work he does in contested space. One concrete player example will make the score's direct-contact, position-specific, and frame-adjustment components easier to follow before I introduce the pooled model and its held-out calibration. From there, I will move through the scouting comparison, the deployment and continuation findings, and the more nuanced postseason result. I will close with what the score measures, where tracking and scouting leave uncertainty, and what the observational analyses cannot establish.
+
+I will keep each visual focused on one comparison, label the sample and units, and explain the meaning of a +1 versus -1 CSAx contrast before showing effect sizes. A timed rehearsal will help me cut details that do not advance the argument and leave room for questions, especially about uneven tracking, the single scouting rater, and the difference between association and causation. To me, a good presentation means that someone who has not read the paper can explain the research question, interpret a higher CSAx correctly, remember the main findings, and understand their limits.

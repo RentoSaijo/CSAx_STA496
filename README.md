@@ -7,8 +7,9 @@ This STA 496 project studies calibrated size above expected (CSAx), a measure of
 - [Research proposal](reports/proposal.pdf) and [Quarto source](reports/proposal.qmd)
 - [Data sources](reports/dataset.pdf) and [Quarto source](reports/dataset.qmd)
 - [Checkpoint 3](reports/progress1.pdf) and [Quarto source](reports/progress1.qmd)
+- [Checkpoint 4](reports/progress2.pdf) and [Quarto source](reports/progress2.qmd)
 
-The proposal, data report, and Checkpoint 3 document earlier stages of the study. The current pooled analysis is bundled in `data/analysis_data.rds`; the related [JHK research repository](https://github.com/RentoSaijo/CSAx_JHK) contains the journal manuscript.
+The proposal, data report, and Checkpoint 3 document earlier stages of the study. Checkpoint 4 summarizes the current pooled findings and presentation plan. The analysis is bundled in `data/analysis_data.rds`; the related [JHK research repository](https://github.com/RentoSaijo/CSAx_JHK) contains the journal manuscript.
 
 ## Reproduce
 
@@ -19,6 +20,7 @@ Rscript -e "renv::restore(prompt = FALSE)"
 quarto render reports/proposal.qmd --to pdf
 quarto render reports/dataset.qmd --to pdf
 quarto render reports/progress1.qmd --to pdf
+quarto render reports/progress2.qmd --to pdf
 ```
 
 The data report reads descriptive inputs from `data/analysis_data.rds`, which also contains the current pooled scores and application results. The numbered scripts prepare source records, fit the models, and analyze outcomes in order: `scripts/01_prepare_data.R`, `scripts/02_build_csax.R`, and `scripts/03_analyze.R`. A full refit requires the source cache in `data/cache/`, which is not tracked in Git.
