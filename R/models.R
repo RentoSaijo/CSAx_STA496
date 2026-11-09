@@ -65,7 +65,13 @@ ridge_contributions <- function(fit, assessment, penalty) {
   tibble::tibble(directRaw = base::rowSums(contributions[, direct_columns, drop = FALSE]), indirectRaw = base::rowSums(contributions[, indirect_columns, drop = FALSE]), intercept = coefficients['(Intercept)'])
 }
 
-# Fit nested season model with excluded-sample frame calibration.
+# Summarize held-out predictions against same-season training means.
+summarize_prediction_performance <- function(data) {
+  data |>
+    dplyr::summarise(n = dplyr::n(), players = dplyr::n_distinct(playerId), rmse = base::sqrt(base::mean((xS - listedSize)^2)), baselineRmse = base::sqrt(base::mean((meanSizePrediction - listedSize)^2)), predictiveRSquared = 1 - base::sum((xS - listedSize)^2) / base::sum((meanSizePrediction - listedSize)^2), squaredCorrelation = stats::cor(xS, listedSize)^2, residualSizeCorrelation = stats::cor(CSAx, listedSize), residualMean = base::mean(rawResidual), residualSd = stats::sd(rawResidual), meanCSAx = base::mean(CSAx), sdCSAx = stats::sd(CSAx), .groups = 'drop')
+}
+
+# Fit nested reference model with excluded-sample calibration.
 fit_reference_model <- function(reference, centers, features, model_id, seed, details = TRUE) {
   native_size <- size_reference(reference)
   reference$listedSize <- apply_size_reference(reference, native_size)
@@ -82,6 +88,7 @@ fit_reference_model <- function(reference, centers, features, model_id, seed, de
     inner_fold <- player_folds(training$playerId, seed + fold, xs_inner_folds)
     inner_predictions <- base::matrix(NA_real_, base::nrow(training), base::length(xs_penalty_grid))
     for (inner in base::seq_len(xs_inner_folds)) {
+      if (base::length(base::intersect(training$playerId[inner_fold != inner], training$playerId[inner_fold == inner]))) base::stop('Player leakage in inner folds.', call. = FALSE)
       inner_fit <- fit_ridge_path(training[inner_fold != inner, ], features)
       inner_predictions[inner_fold == inner, ] <- predict_ridge_path(inner_fit, training[inner_fold == inner, ])
     }
@@ -92,6 +99,7 @@ fit_reference_model <- function(reference, centers, features, model_id, seed, de
       parsnip::set_engine('lm') |>
       parsnip::fit_xy(x = training |> dplyr::select(listedSize), y = inner_predictions[, best])
     outer_fit <- fit_ridge_path(training, features)
+    baseline <- training |> dplyr::group_by(seasonId) |> dplyr::summarise(meanSizePrediction = base::mean(listedSize), .groups = 'drop')
     score_fold <- function(data, center = FALSE) {
       if (base::nrow(data) == 0L) base::return(tibble::tibble())
       prediction <- predict_ridge_path(outer_fit, data, penalties = penalty)[, 1L]
@@ -105,7 +113,7 @@ fit_reference_model <- function(reference, centers, features, model_id, seed, de
       result$xS <- prediction
       result$expectedXSGivenS <- expected
       result$rawResidual <- prediction - expected
-      result$meanSizePrediction <- base::mean(training$listedSize)
+      result$meanSizePrediction <- baseline$meanSizePrediction[base::match(data$seasonId, baseline$seasonId)]
       result$outsideTrainingRange <- base::nzchar(unsupported)
       result$outsideFeatures <- unsupported
       result$imputedFeatures <- base::apply(!base::is.finite(base::as.matrix(data[features])), 1L, base::sum)
@@ -115,7 +123,7 @@ fit_reference_model <- function(reference, centers, features, model_id, seed, de
     }
     native_predictions[[fold]] <- score_fold(assessment)
     center_predictions[[fold]] <- score_fold(center_assessment, center = TRUE)
-    tuning_parts[[fold]] <- tibble::tibble(outerFold = fold, penalty = penalty, innerRmse = base::sqrt(errors[best]), trainingRows = base::nrow(training), assessmentRows = base::nrow(assessment), calibrationIntercept = stats::coef(calibration$fit)[1L], calibrationSlope = stats::coef(calibration$fit)[2L])
+    tuning_parts[[fold]] <- tibble::tibble(outerFold = fold, penalty = penalty, innerRmse = base::sqrt(errors[best]), trainingRows = base::nrow(training), trainingPlayers = dplyr::n_distinct(training$playerId), assessmentRows = base::nrow(assessment), calibrationIntercept = stats::coef(calibration$fit)[1L], calibrationSlope = stats::coef(calibration$fit)[2L])
     if (details) {
       coefficients <- base::as.matrix(stats::coef(outer_fit$model$fit, s = penalty))[, 1L]
       coefficient_parts[[fold]] <- tibble::tibble(outerFold = fold, feature = features, coefficient = dplyr::coalesce(base::unname(coefficients[features]), 0), component = dplyr::if_else(features %in% xs_direct_features, 'Direct', 'Indirect'))
@@ -130,14 +138,18 @@ fit_reference_model <- function(reference, centers, features, model_id, seed, de
     dplyr::mutate(CSAx = (rawResidual - residual_mean) / residual_sd, referencePercentile = reference_percentile(rawResidual, native$rawResidual), model = model_id, referencePopulation = model_id)
   if (details) predictions <- predictions |> dplyr::mutate(directContribution = directRaw / residual_sd, indirectContribution = indirectRaw / residual_sd, frameAdjustment = (intercept - expectedXSGivenS - residual_mean) / residual_sd)
   native <- predictions |> dplyr::filter(!isCenterComparison)
-  performance <- tibble::tibble(model = model_id, seasonId = reference$seasonId[1L], n = base::nrow(native), players = dplyr::n_distinct(native$playerId), rmse = base::sqrt(base::mean((native$xS - native$listedSize)^2)), baselineRmse = base::sqrt(base::mean((native$meanSizePrediction - native$listedSize)^2)), predictiveRSquared = 1 - base::sum((native$xS - native$listedSize)^2) / base::sum((native$meanSizePrediction - native$listedSize)^2), squaredCorrelation = stats::cor(native$xS, native$listedSize)^2, residualSizeCorrelation = stats::cor(native$CSAx, native$listedSize), residualMean = residual_mean, residualSd = residual_sd)
-  base::list(predictions = predictions, performance = performance, coefficients = dplyr::bind_rows(coefficient_parts) |> dplyr::mutate(model = model_id, seasonId = reference$seasonId[1L]), tuning = dplyr::bind_rows(tuning_parts) |> dplyr::mutate(model = model_id, seasonId = reference$seasonId[1L]), sizeReference = dplyr::bind_cols(tibble::tibble(model = model_id, seasonId = reference$seasonId[1L]), tibble::as_tibble(native_size)))
+  pooled <- dplyr::n_distinct(reference$seasonId) > 1L
+  metadata <- tibble::tibble(model = model_id, seasonId = if (pooled) NA_integer_ else reference$seasonId[1L], referenceScope = if (pooled) 'Position across study seasons' else 'Position within season', firstSeason = base::min(reference$seasonId), lastSeason = base::max(reference$seasonId))
+  label <- function(data) dplyr::bind_cols(data, metadata[base::rep(1L, base::nrow(data)), ])
+  performance <- native |> dplyr::group_by(model, seasonId) |> summarize_prediction_performance()
+  pooled_performance <- if (pooled) native |> dplyr::group_by(model) |> summarize_prediction_performance() else tibble::tibble()
+  base::list(predictions = predictions, performance = performance, pooledPerformance = pooled_performance, coefficients = label(dplyr::bind_rows(coefficient_parts)), tuning = label(dplyr::bind_rows(tuning_parts)), sizeReference = label(tibble::as_tibble(native_size)) |> dplyr::mutate(residualMean = residual_mean, residualSd = residual_sd))
 }
 
 # Positional Systems ------------------------------------------------------
 
 # Fit native applications and symmetric center references.
-fit_positional_system <- function(features, seed = xs_seed, specification = 'Combined', scope = 'All situations', minimum_minutes = xs_minutes, details = TRUE, parallel_seasons = FALSE, feature_sets = NULL, score_centers = TRUE) {
+fit_positional_system <- function(features, seed = xs_seed, specification = 'Combined', scope = 'All situations', minimum_minutes = xs_minutes, details = TRUE, parallel_seasons = FALSE, feature_sets = NULL, score_centers = TRUE, pool_seasons = FALSE) {
   data <- features |>
     dplyr::filter(eventScope == scope, timeOnIce >= minimum_minutes * 60) |>
     dplyr::mutate(rowId = dplyr::row_number())
@@ -150,20 +162,25 @@ fit_positional_system <- function(features, seed = xs_seed, specification = 'Com
     model_features$Defensemen <- NULL
   }
   if (!base::is.null(feature_sets)) model_features <- feature_sets
-  jobs <- tidyr::expand_grid(seasonId = xs_behavior_seasons, model = base::names(model_features))
+  jobs <- tidyr::expand_grid(seasonId = if (pool_seasons) NA_integer_ else xs_behavior_seasons, model = base::names(model_features))
+  if (pool_seasons) {
+    data <- data |> dplyr::filter(seasonId %in% xs_behavior_seasons)
+    data$outerFold <- player_folds(data$playerId, seed)
+  }
   fit_job <- function(index) {
     season <- jobs$seasonId[index]
     model  <- jobs$model[index]
-    season_data <- data |> dplyr::filter(seasonId == season)
-    season_data$outerFold <- player_folds(season_data$playerId, seed + season)
+    season_data <- if (pool_seasons) data else data |> dplyr::filter(seasonId == season)
+    if (!pool_seasons) season_data$outerFold <- player_folds(season_data$playerId, seed + season)
     positions <- switch(model, Forwards = base::c('C', 'L', 'R'), Wings = base::c('L', 'R'), Defensemen = 'D')
     reference <- season_data |> dplyr::filter(positionCode %in% positions)
     centers <- season_data |> dplyr::filter(positionCode == 'C', model != 'Forwards', score_centers)
-    fit_reference_model(reference, centers, model_features[[model]], model, seed + season, details = details)
+    fit_reference_model(reference, centers, model_features[[model]], model, if (pool_seasons) seed else seed + season, details = details)
   }
   fits <- if (parallel_seasons) parallel::mclapply(base::seq_len(base::nrow(jobs)), fit_job, mc.cores = base::min(12L, base::nrow(jobs)), mc.set.seed = FALSE) else base::lapply(base::seq_len(base::nrow(jobs)), fit_job)
   if (base::any(base::vapply(fits, base::inherits, base::logical(1L), 'try-error'))) base::stop('Positional model worker failed.', call. = FALSE)
-  result <- purrr::map(stats::setNames(base::c('predictions', 'performance', 'coefficients', 'tuning', 'sizeReference'), base::c('predictions', 'performance', 'coefficients', 'tuning', 'sizeReference')), function(component) purrr::map_dfr(fits, component))
+  components <- base::c('predictions', 'performance', 'pooledPerformance', 'coefficients', 'tuning', 'sizeReference')
+  result <- purrr::map(stats::setNames(components, components), function(component) purrr::map_dfr(fits, component))
   result$specification <- specification
   result$scope <- scope
   result$minimumMinutes <- minimum_minutes
@@ -204,7 +221,7 @@ a3z_sparse_flags <- function(predictions, features, feature_sets) {
 build_a3z_models <- function(inputs) {
   feature_sets <- a3z_feature_sets()
   base::message('Fitting ', a3z_specification, '.')
-  result <- fit_positional_system(inputs$features, specification = a3z_specification, scope = a3z_scope, feature_sets = feature_sets, parallel_seasons = TRUE, score_centers = FALSE)
+  result <- fit_positional_system(inputs$features, specification = a3z_specification, scope = a3z_scope, feature_sets = feature_sets, parallel_seasons = TRUE, score_centers = FALSE, pool_seasons = TRUE)
   result$predictions <- a3z_sparse_flags(result$predictions, inputs$features, feature_sets)
   result$features <- feature_sets
   result$version <- a3z_version

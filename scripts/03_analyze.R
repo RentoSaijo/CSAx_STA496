@@ -24,6 +24,7 @@ if (!'--benchmark' %in% base::commandArgs(trailingOnly = TRUE)) {
   pilot$sizeReference <- fits[[a3z_specification]]$sizeReference
   pilot$benchmark <- base::list(specification = 'Full-season play-by-play benchmark', eventScope = 'All situations with labeled sensitivities', components = base::c('inputs', 'primary', 'centers', 'sensitivities', 'applications', 'bootstrap', 'inference'), builtAt = analysis$builtAt)
   pilot$settings <- base::list(version = a3z_version, definition = a3z_definition, features = purrr::map(fits, 'features'), eligibilityMinutes = xs_minutes, trackedMinutes = a3z_minutes, rankingMinutes = 500, sparseDenominatorThreshold = 20L, outerFolds = xs_outer_folds, innerFolds = xs_inner_folds, penaltyGrid = xs_penalty_grid, seed = xs_seed)
+  pilot$settings$reference <- base::list(seasons = xs_behavior_seasons, population = 'All eligible player-seasons within position', weighting = 'Equal player-season weights', foldGrouping = 'Player across study seasons', calibration = 'Inner held-out predictions pooled across outer-training seasons', standardization = 'Outer held-out residuals pooled within position', predictionBenchmark = 'Same-season outer-training mean listed size')
   pilot$builtAt <- base::format(base::Sys.time(), tz = 'UTC', usetz = TRUE)
   if (base::is.null(analysis$a3zBenchmark) && !base::identical(analysis$a3z$settings$version, a3z_version)) {
     analysis$a3zBenchmark <- analysis$a3z[base::setdiff(base::names(analysis$a3z), 'inputs')]

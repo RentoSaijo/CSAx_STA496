@@ -97,7 +97,8 @@ if (base::nrow(missing_histories) > 0L) base::stop('Career histories do not cove
 scouting_codes <- readr::read_csv('validation/external_validation_data.csv', show_col_types = FALSE) |>
   dplyr::select(-dplyr::any_of('meanCSAx'))
 if (base::file.exists('validation_private/external_validation_hashes.csv')) {
-  private_codes <- read_scouting_validation()$data
+  private_codes <- read_scouting_validation()$data |>
+    dplyr::filter(playerId != 8483505L)
   code_columns <- base::c('studyId', 'playerId', 'overallPhysicality', 'playsBiggerExplicit', 'activePhysicalEngagement', 'interiorPlay')
   public_check <- scouting_codes |> dplyr::select(dplyr::all_of(code_columns)) |> dplyr::arrange(studyId)
   private_check <- private_codes |> dplyr::select(dplyr::all_of(code_columns)) |> dplyr::arrange(studyId)

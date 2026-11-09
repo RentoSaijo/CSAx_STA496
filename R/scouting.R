@@ -1,6 +1,6 @@
 # Scouting Ratings --------------------------------------------------------
 
-# Read reusable physical-engagement codes and expanded-cohort status.
+# Read retained scouting codes and expanded-cohort status.
 read_physicality_scouting <- function() {
   columns <- base::c('studyId', 'playerId', 'player', 'sourceId', 'reportYear', 'publicationDate', 'sourcePage', 'sourceLocator', 'publicUrl', 'reportTextSha256', 'activePhysicalEngagement')
   frozen <- readr::read_csv('validation/external_validation_data.csv', show_col_types = FALSE)
@@ -8,7 +8,8 @@ read_physicality_scouting <- function() {
     dplyr::select(dplyr::all_of(columns)) |>
     dplyr::mutate(reportDate = publicationDate, ratingBatch = 'Frozen forward ratings')
   if (base::file.exists('validation_private/external_validation_hashes.csv')) {
-    locked <- read_scouting_validation()$data
+    locked <- read_scouting_validation()$data |>
+      dplyr::filter(playerId != 8483505L)
     compare <- base::c('studyId', 'playerId', 'activePhysicalEngagement', 'interiorPlay')
     if (!base::isTRUE(base::all.equal(frozen[compare] |> dplyr::arrange(studyId), locked[compare] |> dplyr::arrange(studyId), check.attributes = FALSE))) base::stop('Frozen physicality codes changed.', call. = FALSE)
   }

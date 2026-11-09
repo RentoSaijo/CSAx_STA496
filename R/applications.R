@@ -337,7 +337,8 @@ analyze_a3z_models <- function(fits, inputs, benchmark_inputs) {
     dplyr::inner_join(native |> dplyr::select(specification, model, playerId, nextSeasonId = seasonId, nextCSAx = CSAx), by = base::c('specification', 'model', 'playerId', 'nextSeasonId')) |>
     dplyr::group_by(specification, model, seasonId, nextSeasonId) |>
     dplyr::summarise(n = dplyr::n(), correlation = stats::cor(currentCSAx, nextCSAx), spearman = stats::cor(currentCSAx, nextCSAx, method = 'spearman'), .groups = 'drop')
-  base::list(predictions = predictions, performance = performance, continuation = purrr::map_dfr(continuation_parts, 'estimates'), continuationProbabilities = purrr::map_dfr(continuation_parts, 'probabilities'), continuationContrasts = purrr::map_dfr(continuation_parts, 'contrast'), scouting = scouting, stability = stability)
+  pooled_performance <- primary$pooledPerformance |> dplyr::mutate(specification = a3z_specification, eventScope = a3z_scope, .before = 1L)
+  base::list(predictions = predictions, performance = performance, pooledPerformance = pooled_performance, continuation = purrr::map_dfr(continuation_parts, 'estimates'), continuationProbabilities = purrr::map_dfr(continuation_parts, 'probabilities'), continuationContrasts = purrr::map_dfr(continuation_parts, 'contrast'), scouting = scouting, stability = stability)
 }
 
 # Focused Role Applications -----------------------------------------------

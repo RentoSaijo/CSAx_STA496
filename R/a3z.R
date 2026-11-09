@@ -5,11 +5,11 @@ a3z_scope <- 'A3Z tracked games; five on five'
 a3z_minutes <- 150
 a3z_player_time_tolerance <- 120
 a3z_game_time_tolerance <- 60
-a3z_version <- '20260926-physicality-v2'
+a3z_version <- '20261104-physicality-pooled-v3'
 a3z_specification <- 'A3Z physicality'
 a3z_forward_features <- base::c('dumpInRecoveriesPer60', 'forecheckPressuresPer60')
 a3z_defense_features <- base::c('defensiveRetrievalsPer60', 'botchedRetrievalsPer60', 'entryDenialShare')
-a3z_definition <- 'Playing tougher for one’s size means making one’s presence felt beyond what body size would suggest, through both direct physical contact and indirect signs of physicality in battles for the puck and space. We quantify this with CSAx by predicting listed height-and-weight size from shared direct and position-specific indirect measures, calibrating that prediction against the player’s listed frame, and standardizing the resulting residual within each season and reference population.'
+a3z_definition <- 'CSAx measures physical play relative to listed size. Within each position, we pool player-season physical-play profiles across 2021–22 through 2024–25 to predict listed size, estimate a calibration baseline for listed size, and standardize the resulting held-out residuals against a common four-season reference. Each player retains separate season-specific inputs, and all seasons of each player remain together in validation folds.'
 a3z_source_columns <- base::c(sourceMinutes = '5v5 TOI', dumpInRecoveries = 'Recoveries', forecheckPressures = 'Forecheck Pressures', forecheckAssists = 'Assists off Forecheck', cycleAssists = 'Assists off Cycle', retrievalExits = 'Retrievals Leading to Exits', botchedRetrievals = 'Botched Retrievals', successfulExits = 'Zone Exits', possessionExits = 'Exits w/ Possession', entryTargets = 'Targets', entryDenials = 'Denials', defensiveRetrievals = 'DZ Retrievals', defensiveTouches = 'DZ Puck Touches', failedExits = 'Failed Exit', missedPasses = 'Missed Passes', clearedExits = 'Clears', carriedExits = 'Carried Exits', passedExits = 'Passed Exits', rushedExits = 'Rushed Exits', secondTouchExits = 'Second Touch Exits', forecheckCycleShots = 'Shots off Forecheck or Cycle', behindNetAssists = 'Behind Net', highDangerAssists = 'Home Plate', primaryShotAssists = 'Primary Shot Assists', shotAssists = 'Passes', sourceShots = 'Shots', sourceRebounds = 'Rebounds', sourceDeflections = 'Deflections')
 
 # Define shared direct and position-specific indirect predictors.
