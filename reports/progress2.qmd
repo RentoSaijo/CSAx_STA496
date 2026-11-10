@@ -60,7 +60,7 @@ The empirical work promised in the proposal is complete and ready for the Novemb
 
 ## Findings
 
-The pooled models improve on a same-season mean-size prediction benchmark, with held-out predictive $R^2$ of 0.10 for forwards and 0.11 for defensemen. Earlier scouting descriptions offer a separate check on what the score captures. Among 59 forwards, players whose reports mention active physical play have mean player-average CSAx 0.77 units higher than those whose reports do not (95% CI [0.39, 1.15]); the difference among 23 defensemen is 0.67 (95% CI [0.19, 1.14]). A report's silence does not identify a player as unphysical, and one rater coded the available passages.
+The pooled models improve on a same-season mean-size prediction benchmark, with held-out predictive $R^2$ of 0.10 for forwards and 0.11 for defensemen. Earlier scouting descriptions offer a separate check on what the score captures. Among 59 forwards, the 21 whose reports describe an active physical-play profile have mean player-average CSAx 0.66 units higher than the 38 without such a description (95% CI [0.23, 1.08]). Among 23 defensemen, the 9 with a qualifying description score 0.75 units higher on average than the 14 without one (95% CI [0.30, 1.21]). Each final code follows an initial blinded reading by one rater and a review of the complete description. A report's silence does not identify an unphysical player.
 
 {{< pagebreak >}}
 
