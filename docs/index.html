@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142b45">
+  <meta name="description" content="Explore NHL Calibrated Size Above Expected rankings by season and position.">
+  <title>CSAx rankings</title>
+  <style>
+    /* Page layout ------------------------------------------------------- */
+    :root { color-scheme: light; font-family: Arial, sans-serif; color: #142b45; background: #f5f7f9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 740px; margin: 0 auto; padding: 36px 20px 24px; }
+    h1 { margin: 0 0 8px; font-size: clamp(30px, 6vw, 40px); letter-spacing: -.04em; }
+    .subtitle { margin: 0 0 28px; color: #526576; font-size: 15px; line-height: 1.5; }
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    label { display: block; font-size: 13px; font-weight: 700; }
+    select, input { display: block; width: 100%; min-width: 0; min-height: 48px; margin-top: 7px; border: 1px solid #bac7d1; border-radius: 7px; background: white; color: #142b45; font: inherit; font-size: 16px; padding: 11px 12px; }
+    input { appearance: none; }
+    :focus-visible { outline: 3px solid #24759a; outline-offset: 3px; }
+    .search { grid-column: 1 / -1; }
+    .status { margin: 22px 0 10px; min-height: 18px; color: #526576; font-size: 13px; }
+    /* Rankings table ---------------------------------------------------- */
+    table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; background: white; border: 1px solid #dde5ec; border-radius: 8px; }
+    th, td { padding: 15px 16px; text-align: left; }
+    th { position: sticky; top: 0; z-index: 1; background: #142b45; color: white; font-size: 13px; font-weight: 700; }
+    th:first-child { width: 70px; border-radius: 7px 0 0; }
+    th:last-child { width: 94px; border-radius: 0 7px 0 0; text-align: right; }
+    td { border-bottom: 1px solid #e8edf1; font-size: 16px; line-height: 1.3; }
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { color: #637484; font-size: 14px; font-variant-numeric: tabular-nums; }
+    td:nth-child(2) { overflow-wrap: anywhere; }
+    td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tbody tr:hover { background: #f3f7fa; }
+    .positive { color: #216c8b; }
+    .empty { text-align: center !important; color: #526576; font-weight: 400 !important; padding: 30px 16px; white-space: normal !important; }
+    footer { margin-top: 22px; font-size: 13px; }
+    a { color: #355d77; text-underline-offset: 3px; }
+    @media (max-width: 400px) {
+      main { padding: 26px 14px 22px; }
+      .controls { gap: 13px; }
+      th, td { padding: 14px 11px; }
+      th:first-child { width: 54px; }
+      th:last-child { width: 76px; }
+      td { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>CSAx rankings</h1>
+    <p class="subtitle">Calibrated Size Above Expected · NHL</p>
+    <div class="controls">
+      <label for="season">Season
+        <select id="season">
+          <option value="2024-25">2024–25</option>
+          <option value="2023-24">2023–24</option>
+          <option value="2022-23">2022–23</option>
+          <option value="2021-22">2021–22</option>
+        </select>
+      </label>
+      <label for="position">Position
+        <select id="position">
+          <option value="F">Forwards</option>
+          <option value="D">Defensemen</option>
+        </select>
+      </label>
+      <label class="search" for="search">Player
+        <input id="search" type="search" placeholder="Search players" autocomplete="off" spellcheck="false">
+      </label>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite">Loading rankings…</p>
+    <table aria-label="CSAx rankings" aria-describedby="status">
+      <thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">CSAx</th></tr></thead>
+      <tbody id="rankings"></tbody>
+    </table>
+    <noscript><p>Enable JavaScript to explore the rankings.</p></noscript>
+    <footer><a href="https://github.com/RentoSaijo/CSAx_STA496">Study and data sources</a></footer>
+  </main>
+  <script>
+    // Ranking controls --------------------------------------------------
+
+    // Read controls and normalize player searches.
+    const season = document.getElementById('season');
+    const position = document.getElementById('position');
+    const search = document.getElementById('search');
+    const body = document.getElementById('rankings');
+    const status = document.getElementById('status');
+    const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    let data = null;
+
+    // Display saved ranks within selected season and position.
+    function render() {
+      if (!data) return;
+      const group = data[season.value + ':' + position.value];
+      const query = normalize(search.value);
+      const rows = group.filter(row => normalize(row[1]).includes(query));
+      const fragment = document.createDocumentFragment();
+      for (const [rank, player, score] of rows) {
+        const row = document.createElement('tr');
+        const rounded = Math.abs(score) < 0.005 ? 0 : score;
+        const values = [rank, player, (rounded > 0 ? '+' : '') + rounded.toFixed(2).replace('-', '−')];
+        for (const value of values) {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.append(cell);
+        }
+        if (rounded > 0) row.lastElementChild.className = 'positive';
+        fragment.append(row);
+      }
+      if (!rows.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 3;
+        cell.className = 'empty';
+        cell.textContent = 'No players match this search.';
+        row.append(cell);
+        fragment.append(row);
+      }
+      body.replaceChildren(fragment);
+      const label = season.selectedOptions[0].text + ' · ' + position.selectedOptions[0].text;
+      status.textContent = label + ' · ' + (query ? rows.length + ' of ' : '') + group.length + ' players';
+    }
+
+    // Load pooled scores and connect controls.
+    for (const control of [season, position]) control.addEventListener('change', render);
+    search.addEventListener('input', render);
+    fetch('rankings.json').then(response => {
+      if (!response.ok) throw new Error('Rankings unavailable');
+      return response.json();
+    }).then(result => {
+      data = result;
+      render();
+    }).catch(() => {
+      status.textContent = 'Rankings could not load. Please refresh to try again.';
+    });
+  </script>
+</body>
+</html>
