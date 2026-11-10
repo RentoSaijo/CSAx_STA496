@@ -233,22 +233,6 @@ analyze_teams <- function(inputs, panel) {
   base::list(seasons = teams, playoffQuality = playoff_quality, summary = summaries, exposurePositions = exposure_positions |> dplyr::distinct(playerId, positionCode))
 }
 
-# Recompute associations with frozen forward scouting ratings.
-analyze_scouting <- function(codes, panel) {
-  means <- panel |> dplyr::filter(model == 'Forwards', playerId %in% codes$playerId) |> dplyr::group_by(playerId) |> dplyr::summarise(meanCSAx = base::mean(CSAx), observedSeasons = dplyr::n(), .groups = 'drop')
-  data <- codes |> dplyr::select(-dplyr::any_of(base::c('meanCSAx', 'eligibleSeasons', 'firstSeason'))) |> dplyr::inner_join(means, by = 'playerId')
-  if (base::nrow(data) != 40L) base::stop('Frozen scouting cohort is incomplete.', call. = FALSE)
-  indicators <- base::c('overallPhysicality', 'playsBiggerExplicit', 'activePhysicalEngagement', 'interiorPlay')
-  estimates <- purrr::map_dfr(indicators, function(indicator) {
-    fit <- fit_analysis_workflow(data, 'meanCSAx', indicator)
-    clustered_term(fit, data, term = indicator) |>
-      dplyr::mutate(indicator = indicator, positiveReports = base::sum(data[[indicator]] == 1L), model = 'Forwards', referencePopulation = 'Forwards', .before = 1L)
-  })
-  estimates$holmPValue <- NA_real_
-  estimates$holmPValue[-1L] <- stats::p.adjust(estimates$pValue[-1L], method = 'holm')
-  base::list(scores = data |> dplyr::select(studyId, playerId, meanCSAx, observedSeasons), estimates = estimates, spearman = stats::cor(data$meanCSAx, data$overallPhysicality, method = 'spearman'), n = 40L, raters = 1L)
-}
-
 # Application Bundle ------------------------------------------------------
 
 # Assemble compact positional application estimates and descriptive summaries.
@@ -260,7 +244,6 @@ analyze_positional_applications <- function(models, inputs) {
   playoffs <- prepare_playoffs(inputs, panel)
   additional_estimates <- analyze_contracts_playoffs(contracts, playoffs)
   teams <- analyze_teams(inputs, panel)
-  scouting <- analyze_scouting(inputs$scoutingCodes, panel)
   sensitivities <- purrr::imap_dfr(models$sensitivities, function(fit, specification) {
     application_panel(fit$predictions, outcomes) |> dplyr::group_by(model, referencePopulation) |> dplyr::group_modify(function(data, key) {
       model <- fit_analysis_workflow(data, 'continued300', primary_predictors, model_type = 'logistic')
@@ -284,7 +267,7 @@ analyze_positional_applications <- function(models, inputs) {
     dplyr::group_by(model, seasonId, nextSeasonId) |> dplyr::summarise(n = dplyr::n(), correlation = stats::cor(currentCSAx, nextCSAx), spearman = stats::cor(currentCSAx, nextCSAx, method = 'spearman'), .groups = 'drop')
   sparse <- inputs$features |> dplyr::filter(eventScope == 'All situations') |> dplyr::mutate(positionGroup = dplyr::if_else(positionCode == 'D', 'Defensemen', dplyr::if_else(positionCode == 'C', 'Centers', 'Wings'))) |>
     dplyr::group_by(positionGroup, seasonId) |> dplyr::summarise(n = dplyr::n(), medianDefensiveTakeaways = stats::median(defensiveTakeaways), lowerQuartileDefensiveTakeaways = stats::quantile(defensiveTakeaways, 0.25), upperQuartileDefensiveTakeaways = stats::quantile(defensiveTakeaways, 0.75), medianPerimeterTakeaways = stats::median(defensivePerimeterTakeaways), missingPerimeterShare = base::sum(base::is.na(defensivePerimeterTakeawayShare)), zeroFights = base::sum(fights == 0), medianContactTaken = stats::median(contactPenaltiesTaken), medianContactDrawn = stats::median(contactPenaltiesDrawn), .groups = 'drop')
-  base::list(panel = panel, primaryPoints = primary_statistics(panel), roster = roster, estimates = dplyr::bind_rows(roster$estimates, additional_estimates), contracts = contracts, playoffs = playoffs, teams = teams, scouting = scouting, sensitivityEstimates = sensitivities, sensitivityAgreement = sensitivity_agreement, centerComponents = center_components, stability = stability, sparseEvents = sparse)
+  base::list(panel = panel, primaryPoints = primary_statistics(panel), roster = roster, estimates = dplyr::bind_rows(roster$estimates, additional_estimates), contracts = contracts, playoffs = playoffs, teams = teams, sensitivityEstimates = sensitivities, sensitivityAgreement = sensitivity_agreement, centerComponents = center_components, stability = stability, sparseEvents = sparse)
 }
 
 # Attach percentile intervals from shared full-pipeline samples.

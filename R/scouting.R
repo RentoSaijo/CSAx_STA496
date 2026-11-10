@@ -1,90 +1,32 @@
 # Scouting Ratings --------------------------------------------------------
 
-# Read retained scouting codes and expanded-cohort status.
+# Read the reviewed scouting passages and codes from one source.
 read_physicality_scouting <- function() {
-  columns <- base::c('studyId', 'playerId', 'player', 'sourceId', 'reportYear', 'publicationDate', 'sourcePage', 'sourceLocator', 'publicUrl', 'reportTextSha256', 'activePhysicalEngagement')
-  frozen <- readr::read_csv('validation/external_validation_data.csv', show_col_types = FALSE)
-  original <- frozen |>
-    dplyr::select(dplyr::all_of(columns)) |>
-    dplyr::mutate(reportDate = publicationDate, ratingBatch = 'Frozen forward ratings')
-  if (base::file.exists('validation_private/external_validation_hashes.csv')) {
-    locked <- read_scouting_validation()$data |>
-      dplyr::filter(playerId != 8483505L)
-    compare <- base::c('studyId', 'playerId', 'activePhysicalEngagement', 'interiorPlay')
-    if (!base::isTRUE(base::all.equal(frozen[compare] |> dplyr::arrange(studyId), locked[compare] |> dplyr::arrange(studyId), check.attributes = FALSE))) base::stop('Frozen physicality codes changed.', call. = FALSE)
-  }
-  manifest <- readr::read_csv('validation/scouting_expansion_manifest.csv', show_col_types = FALSE)
-  planned <- manifest |> dplyr::filter(artifact == 'Blinded packet')
-  complete <- base::file.exists('validation/scouting_expansion_lock.csv')
-  expanded <- original[0L, ]
-  if (complete) {
-    lock <- readr::read_csv('validation/scouting_expansion_lock.csv', show_col_types = FALSE)
-    code_path <- 'validation/scouting_expansion_data.csv'
-    if (base::nrow(lock) != 1L || !base::file.exists(code_path) || !base::identical(digest::digest(file = code_path, algo = 'sha256'), lock$codesSha256)) base::stop('Expanded scouting codes differ from locked data.', call. = FALSE)
-    private_paths <- base::c(packetSha256 = 'validation_private/scouting_expansion_packet.csv', sourceSha256 = base::file.path('validation_private', lock$sourceFile))
-    for (field in base::names(private_paths)) {
-      path <- private_paths[[field]]
-      if (base::file.exists(path) && !base::identical(digest::digest(file = path, algo = 'sha256'), lock[[field]])) base::stop('A locked expanded-scouting source changed.', call. = FALSE)
-    }
-    expanded <- readr::read_csv(code_path, show_col_types = FALSE) |>
-      dplyr::select(dplyr::all_of(base::c(columns, 'reportDate'))) |>
-      dplyr::mutate(ratingBatch = 'Expanded positional ratings')
-    if (base::nrow(expanded) != planned$rows) base::stop('Expanded scouting cohort is incomplete.', call. = FALSE)
-  }
-  data <- dplyr::bind_rows(original, expanded)
-  assert_unique(data, 'playerId', 'Physicality scouting cohort')
-  base::list(data = data, status = if (complete) 'Complete' else 'Awaiting human ratings', expansionComplete = complete, plannedNewPlayers = planned$rows, plannedNewForwards = planned$forwards, plannedNewDefensemen = planned$defensemen, completedNewPlayers = base::nrow(expanded), raters = 1L, indicators = 'activePhysicalEngagement')
+  columns <- base::c('studyId', 'playerId', 'player', 'position', 'sourceId', 'reportYear', 'publicationDate', 'reportDate', 'sourcePage', 'sourceLocator', 'publicUrl', 'sourceTextSha256', 'reportText', 'activePhysicalPlayProfile', 'notes')
+  data <- readr::read_csv('validation/scouting_annotations.csv', show_col_types = FALSE, col_types = readr::cols(studyId = readr::col_character(), playerId = readr::col_integer(), publicationDate = readr::col_date(), reportDate = readr::col_date(), reportText = readr::col_character(), activePhysicalPlayProfile = readr::col_integer(), .default = readr::col_guess()))
+  if (!base::identical(base::names(data), columns) || base::nrow(data) != 82L) base::stop('Scouting annotations must contain the 82 retained records and required fields.', call. = FALSE)
+  assert_unique(data, 'studyId', 'Scouting annotations')
+  assert_unique(data, 'playerId', 'Scouting annotations')
+  required <- base::c('studyId', 'playerId', 'player', 'position', 'sourceId', 'reportYear', 'reportDate', 'sourceLocator', 'publicUrl', 'sourceTextSha256', 'reportText', 'activePhysicalPlayProfile')
+  if (base::anyNA(data[required]) || base::any(!base::nzchar(base::trimws(data$reportText))) || base::any(!base::nzchar(base::trimws(data$sourceLocator))) || base::any(!base::grepl('^[0-9a-f]{64}$', data$sourceTextSha256)) || !base::all(data$activePhysicalPlayProfile %in% base::c(0L, 1L))) base::stop('Scouting annotations contain missing source details, passages, or binary codes.', call. = FALSE)
+  if (base::sum(data$position == 'Forwards') != 59L || base::sum(data$position == 'Defensemen') != 23L) base::stop('Scouting annotations do not match the retained positional cohort.', call. = FALSE)
+  sources <- readr::read_csv('validation/external_validation_source_catalog.csv', show_col_types = FALSE, col_types = readr::cols(publicationDate = readr::col_date(), reportDate = readr::col_date(), .default = readr::col_guess()))
+  source_match <- dplyr::left_join(data |> dplyr::select(sourceId, reportYear, publicationDate, reportDate, publicUrl), sources |> dplyr::select(sourceId, sourceYear = reportYear, sourcePublicationDate = publicationDate, sourceReportDate = reportDate, sourceUrl = publicUrl), by = 'sourceId')
+  if (base::anyNA(source_match$sourceYear) || base::any(source_match$reportYear != source_match$sourceYear) || base::any(source_match$reportDate != source_match$sourceReportDate) || base::any(source_match$publicUrl != source_match$sourceUrl) || !base::identical(source_match$publicationDate, source_match$sourcePublicationDate)) base::stop('Scouting report source details do not match the source catalog.', call. = FALSE)
+  base::list(data = data, status = 'Complete', raters = 1L, indicators = 'activePhysicalPlayProfile')
 }
 
-# Lock complete human ratings after checking identities and passage integrity.
-lock_scouting_expansion <- function() {
-  if (base::file.exists('validation/scouting_expansion_lock.csv')) base::stop('Expanded scouting ratings are already locked.', call. = FALSE)
-  packet_path <- 'validation_private/scouting_expansion_packet.csv'
-  source_path <- 'validation_private/scouting_expansion_packet.numbers'
-  key_path <- 'validation_private/scouting_expansion_key.csv'
-  manifest <- readr::read_csv('validation/scouting_expansion_manifest.csv', show_col_types = FALSE)
-  planned <- manifest |> dplyr::filter(artifact == 'Blinded packet')
-  blinded_path <- base::file.path('validation_private', planned$file)
-  if (!base::identical(digest::digest(file = blinded_path, algo = 'sha256'), planned$sha256)) base::stop('Original blinded expansion packet changed.', call. = FALSE)
-  key_hash <- manifest$sha256[manifest$artifact == 'Identity key']
-  if (!base::identical(digest::digest(file = key_path, algo = 'sha256'), key_hash)) base::stop('Expanded scouting identity key changed.', call. = FALSE)
-  ratings <- readr::read_csv(packet_path, col_types = readr::cols(studyId = readr::col_character(), reportText = readr::col_character(), activePhysicalEngagement = readr::col_integer(), notes = readr::col_character()))
-  expected <- base::c('studyId', 'reportText', 'activePhysicalEngagement', 'notes')
-  if (!base::identical(base::names(ratings), expected)) base::stop('Expanded scouting packet columns changed.', call. = FALSE)
-  blinded <- readr::read_csv(blinded_path, show_col_types = FALSE)
-  assert_unique(ratings, 'studyId', 'Expanded scouting packet')
-  if (base::nrow(ratings) != planned$rows || !base::identical(ratings$studyId, blinded$studyId) || !base::identical(ratings$reportText, blinded$reportText)) base::stop('Expanded scouting packet differs from planned passages or their order.', call. = FALSE)
-  if (base::anyNA(ratings$activePhysicalEngagement) || !base::all(ratings$activePhysicalEngagement %in% base::c(0L, 1L))) base::stop('Complete activePhysicalEngagement with 0 or 1 for every passage before locking ratings.', call. = FALSE)
-  # Freeze human ratings and source provenance before joining identities.
-  lock <- tibble::tibble(rows = base::nrow(ratings), raters = 1L, sourceFile = base::basename(source_path), sourceSha256 = digest::digest(file = source_path, algo = 'sha256'), packetSha256 = digest::digest(file = packet_path, algo = 'sha256'), blindedPacketSha256 = planned$sha256, keySha256 = key_hash, codesSha256 = NA_character_, lockedAt = base::format(base::Sys.time(), tz = 'UTC', usetz = TRUE))
-  readr::write_csv(lock, 'validation/scouting_expansion_lock.csv')
-  key <- readr::read_csv(key_path, show_col_types = FALSE)
-  assert_unique(key, 'studyId', 'Expanded scouting identity key')
-  if (!base::identical(base::sort(ratings$studyId), base::sort(key$studyId))) base::stop('Expanded scouting identities do not cover locked ratings.', call. = FALSE)
-  checked <- ratings |>
-    dplyr::mutate(observedTextSha256 = base::vapply(reportText, digest::digest, base::character(1L), algo = 'sha256', serialize = FALSE)) |>
-    dplyr::inner_join(key, by = 'studyId')
-  if (base::any(checked$observedTextSha256 != checked$redactedTextSha256)) base::stop('A blinded scouting passage changed during coding.', call. = FALSE)
-  codes <- checked |>
-    dplyr::select(studyId, playerId, player, sourceId, reportYear, publicationDate, reportDate, sourcePage, sourceLocator, publicUrl, reportTextSha256, activePhysicalEngagement) |>
-    dplyr::arrange(studyId)
-  code_path <- 'validation/scouting_expansion_data.csv'
-  readr::write_csv(codes, code_path)
-  lock$codesSha256 <- digest::digest(file = code_path, algo = 'sha256')
-  readr::write_csv(lock, 'validation/scouting_expansion_lock.csv')
-  base::message('Locked ', base::nrow(codes), ' expanded scouting ratings.')
-  base::invisible(codes)
-}
-
-# Compare scored physicality with independently coded scouting descriptions.
+# Compare scored physicality with reviewed scouting descriptions.
 analyze_physicality_scouting <- function(predictions, ratings) {
   observations <- predictions |>
     dplyr::filter(!isCenterComparison, model %in% base::c('Forwards', 'Defensemen')) |>
     dplyr::inner_join(ratings$data, by = 'playerId') |>
     dplyr::filter(dplyr::coalesce(publicationDate, reportDate) < base::as.Date(base::paste0(seasonId %/% 10000L, '-09-01')))
+  if (base::any(observations$model != observations$position) || dplyr::n_distinct(observations$playerId) != 82L) base::stop('Scouting annotations do not align with the scored cohort.', call. = FALSE)
   scores <- observations |>
-    dplyr::group_by(model, referencePopulation, studyId, playerId, ratingBatch, activePhysicalEngagement) |>
-    dplyr::summarise(meanCSAx = base::mean(CSAx), observedSeasons = dplyr::n(), .groups = 'drop')
+    dplyr::group_by(model, referencePopulation, studyId, playerId, activePhysicalPlayProfile) |>
+    dplyr::summarise(meanCSAx = base::mean(CSAx), observedSeasons = dplyr::n(), .groups = 'drop') |>
+    dplyr::mutate(activePhysicalEngagement = activePhysicalPlayProfile)
   estimates <- purrr::map_dfr(base::c('Forwards', 'Defensemen'), function(population) {
     data <- scores |> dplyr::filter(model == population)
     purrr::map_dfr(ratings$indicators, function(indicator) {

@@ -5,13 +5,6 @@ base::source('R/functions.R')
 base::source('R/data.R')
 base::dir.create('data/cache', recursive = TRUE, showWarnings = FALSE)
 
-# Lock completed human scouting ratings independently of model preparation.
-if ('--lock-scouting' %in% base::commandArgs(trailingOnly = TRUE)) {
-  base::source('R/scouting.R')
-  lock_scouting_expansion()
-  base::quit(save = 'no', status = 0L)
-}
-
 # Verify pinned NHL data package before preparing observations.
 package_sha <- utils::packageDescription('nhlscraper')[['RemoteSha']]
 if (!base::identical(package_sha, xs_package_sha)) base::stop('Installed nhlscraper revision does not match research revision.', call. = FALSE)
@@ -93,17 +86,7 @@ if (base::nrow(missing_histories) > 0L) base::stop('Career histories do not cove
 
 # Scientific Inputs --------------------------------------------------------
 
-# Assemble compact inputs without scouting prose.
-scouting_codes <- readr::read_csv('validation/external_validation_data.csv', show_col_types = FALSE) |>
-  dplyr::select(-dplyr::any_of('meanCSAx'))
-if (base::file.exists('validation_private/external_validation_hashes.csv')) {
-  private_codes <- read_scouting_validation()$data |>
-    dplyr::filter(playerId != 8483505L)
-  code_columns <- base::c('studyId', 'playerId', 'overallPhysicality', 'playsBiggerExplicit', 'activePhysicalEngagement', 'interiorPlay')
-  public_check <- scouting_codes |> dplyr::select(dplyr::all_of(code_columns)) |> dplyr::arrange(studyId)
-  private_check <- private_codes |> dplyr::select(dplyr::all_of(code_columns)) |> dplyr::arrange(studyId)
-  if (!base::isTRUE(base::all.equal(public_check, private_check, check.attributes = FALSE))) base::stop('Public scouting codes differ from locked ratings.', call. = FALSE)
-}
+# Assemble compact scientific inputs.
 inputs <- base::list(
   features = features,
   histories = histories,
@@ -115,7 +98,6 @@ inputs <- base::list(
   teamPlayerPositions = base::readRDS('data/cache/players.rds') |> dplyr::select(playerId, positionCode),
   teams = base::readRDS('data/cache/teams.rds'),
   seasons = base::readRDS('data/cache/seasons.rds'),
-  scoutingCodes = scouting_codes,
   provenance = base::list(featureVersion = xs_feature_version, packageSha = xs_package_sha, inherited = base::readRDS('data/cache/provenance.rds'), sourceInventory = stats::setNames(purrr::map(season_parts, function(part) part[base::c('playByPlaySha256', 'rosterSha256', 'shiftSha256', 'sourceRows', 'collectedAt')]), xs_behavior_seasons), locationQuality = purrr::map_dfr(season_parts, 'locationQuality'), penaltyInventory = purrr::map_dfr(season_parts, 'penalties'), eventAttribution = purrr::map_dfr(season_parts, 'eventAttribution'), penaltyAttribution = purrr::map_dfr(season_parts, 'penaltyAttribution'), teammateBlocksExcluded = tibble::tibble(seasonId = xs_behavior_seasons, events = purrr::map_int(season_parts, 'teammateBlocksExcluded')))
 )
 base::saveRDS(inputs, 'data/cache/positional_inputs.rds', compress = 'xz')
