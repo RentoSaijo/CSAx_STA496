@@ -8,9 +8,11 @@ This STA 496 project studies calibrated size above expected (CSAx), a measure of
 - [Data sources](reports/dataset.pdf) and [Quarto source](reports/dataset.qmd)
 - [Checkpoint 3](reports/progress1.pdf) and [Quarto source](reports/progress1.qmd)
 - [Checkpoint 4](reports/progress2.pdf) and [Quarto source](reports/progress2.qmd)
-- [Presentation](reports/presentation.pptx) — 30-minute talk with 24 main slides, six backup slides, and speaker notes
+- [Presentation](reports/presentation.pptx) — 30-minute talk with 24 main slides, six hidden backup slides, and timed speaker notes
 
 The proposal, data report, and Checkpoint 3 document earlier stages of the study. Checkpoint 4 summarizes the current pooled findings and presentation plan. The November 10 presentation develops the research for a general audience, with editable charts and linked sources. The analysis is bundled in `data/analysis_data.rds`; the related [JHK research repository](https://github.com/RentoSaijo/CSAx_JHK) contains the journal manuscript.
+
+The presentation includes its images and chart data for offline use. Leave slide 24 displayed during questions and use PowerPoint's slide navigator to open the backups as needed.
 
 ## Scouting annotations
 
